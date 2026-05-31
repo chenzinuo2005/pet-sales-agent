@@ -30,11 +30,12 @@ def search_pet_knowledge(query: str) -> str:
         if not result or not result.strip():
             return "知识库中暂无相关信息"
         return result
-    except FileNotFoundError:
+    except FileNotFoundError as e:
+        logger.warning(f"知识库目录或向量库不存在: {e}")
         return "知识库暂未初始化，请先运行 python -m app.main init-rag"
     except Exception as e:
         logger.error(f"知识库检索失败: {e}")
-        return "知识库暂未初始化，请先运行 python -m app.main init-rag"
+        return "知识库检索暂时不可用，请稍后重试"
 
 
 @tool
@@ -57,6 +58,10 @@ def tavily_web_search(query: str) -> str:
     except Exception as e:
         error_msg = str(e).lower()
         if any(kw in error_msg for kw in ("429", "rate limit", "too many requests")):
-            return "搜索服务暂时不可用"
+            logger.warning("Tavily 速率限制: %s", e)
+            return "搜索请求太频繁，请稍后重试"
+        elif any(kw in error_msg for kw in ("401", "unauthorized", "403", "forbidden")):
+            logger.error("Tavily 认证失败: %s", e)
+            return "搜索服务未正确配置"
         logger.error(f"网络搜索失败: {e}")
-        return "搜索服务暂时不可用"
+        return "网络搜索暂时不可用，请稍后重试"

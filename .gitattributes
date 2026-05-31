@@ -1,0 +1,26 @@
+# Auto-detect text files and ensure LF in repo, CRLF in working tree on Windows
+* text=auto
+
+# Python
+*.py text eol=lf
+*.pyi text eol=lf
+
+# Web
+*.js text eol=lf
+*.vue text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+
+# Binary
+*.pth binary
+*.db binary
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
