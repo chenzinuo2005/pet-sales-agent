@@ -1,28 +1,34 @@
-"""CNN model: ResNet50 backbone (ImageNet pretrained) + custom classifier."""
+"""CNN model: EfficientNet-B0 backbone (ImageNet pretrained) + custom classifier."""
 import torch.nn as nn
-from torchvision.models import resnet50, ResNet50_Weights
+from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 
 from app.common.logger import logger
 
 
 def create_model(num_classes: int = 37) -> nn.Module:
-    """ResNet50 with ImageNet pretrained weights, custom classification head.
+    """EfficientNet-B0 with ImageNet pretrained weights, custom classification head.
+
+    EfficientNet-B0 (~5.3M params) is chosen over ResNet50 (~24M) for:
+    - 4-5x faster CPU training (lower FLOPs)
+    - Lower memory footprint
+    - Comparable accuracy on fine-grained classification
 
     Input:  (B, 3, 224, 224)
     Output: (B, num_classes) — raw logits
     """
-    model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+    model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
 
-    # Replace final FC: 2048 -> 256 -> num_classes
-    in_features = model.fc.in_features
-    model.fc = nn.Sequential(
+    # Replace classifier: 1280 -> 256 -> num_classes
+    in_features = model.classifier[1].in_features
+    model.classifier = nn.Sequential(
+        nn.Dropout(0.3, inplace=True),
         nn.Linear(in_features, 256),
         nn.ReLU(inplace=True),
         nn.Dropout(0.3),
         nn.Linear(256, num_classes),
     )
 
-    logger.info("ResNet50 created (pretrained ImageNet, %d classes)", num_classes)
+    logger.info("EfficientNet-B0 created (pretrained ImageNet, %d classes)", num_classes)
     return model
 
 
