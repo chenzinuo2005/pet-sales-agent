@@ -2,6 +2,7 @@
 import os
 
 import matplotlib
+
 matplotlib.use("Agg")  # non-interactive backend (no display required)
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,8 +10,8 @@ import seaborn as sns
 import torch
 import torch.nn as nn
 
-from app.cnn.model import create_model
 from app.cnn.dataset import create_dataloaders
+from app.cnn.model import create_model
 from app.common.logger import logger
 
 
@@ -77,8 +78,19 @@ def _plot_confusion_matrix(
     logger.info("Confusion matrix saved to %s", save_path)
 
 
-def evaluate_model(data_root: str, weights_path: str | None = None) -> tuple[float, float]:
+def evaluate_model(
+    data_root: str,
+    weights_path: str | None = None,
+    output_dir: str | None = None,
+) -> tuple[float, float]:
     """Load trained model, evaluate on test set, and save confusion matrix.
+
+    Args:
+        data_root: Path to the Oxford-IIIT Pet dataset root.
+        weights_path: Path to trained .pth file. If None, defaults to
+            settings.model_weights_path.
+        output_dir: Directory for the confusion matrix PNG. If None,
+            defaults to settings.confusion_matrix_dir.
 
     Returns:
         (test_loss, test_accuracy)
@@ -87,9 +99,8 @@ def evaluate_model(data_root: str, weights_path: str | None = None) -> tuple[flo
     logger.info("Using device: %s", device)
 
     if weights_path is None:
-        weights_path = os.path.join(
-            os.path.dirname(__file__), "../../resources/models/pet_cnn.pth"
-        )
+        from app.common.config import settings
+        weights_path = settings.model_weights_path
     weights_path = os.path.normpath(weights_path)
 
     if not os.path.exists(weights_path):
@@ -103,7 +114,9 @@ def evaluate_model(data_root: str, weights_path: str | None = None) -> tuple[flo
     logger.info("Test: loss=%.4f, accuracy=%.2f%%", test_loss, test_acc * 100)
 
     # ── confusion matrix ──────────────────────────────────────────────
-    output_dir = os.path.join(os.path.dirname(__file__), "../../resources/outputs")
+    if output_dir is None:
+        from app.common.config import settings
+        output_dir = settings.confusion_matrix_dir
     cm_path = os.path.normpath(os.path.join(output_dir, "confusion_matrix.png"))
     _plot_confusion_matrix(all_targets, all_preds, num_classes, cm_path)
 

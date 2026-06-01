@@ -1,16 +1,13 @@
 <script setup>
 defineProps({
-  content: {
-    type: String,
-    default: '',
-  },
+  content: { type: String, default: '' },
 })
 </script>
 
 <template>
   <span class="streaming-token">
     <span class="token-text">{{ content }}</span>
-    <span class="token-cursor">|</span>
+    <span class="token-cursor" aria-hidden="true">|</span>
   </span>
 </template>
 
@@ -26,7 +23,7 @@ defineProps({
 
 .token-cursor {
   display: inline;
-  color: var(--color-accent);
+  color: var(--color-primary);
   font-weight: 700;
   animation: blink 0.7s infinite;
 }

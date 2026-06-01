@@ -4,10 +4,14 @@ Provides the public API `predict_breed(image_path)` used by pet_agent.py
 to preprocess pet images before agent dispatch.
 
 Architecture:
-    - Lazy-loads the ResNet18 model on first call (~2s), reuses thereafter.
+    - Lazy-loads the EfficientNet-B0 model on first call (~2s), reuses thereafter.
     - Preprocessing matches training (Resize→CenterCrop→ToTensor→Normalize)
       WITHOUT data augmentation.
     - Applies 4-tier confidence threshold strategy (see spec section 6).
+    - Supports dependency injection via `predict_with_model()` and
+      parameterized `_get_model(weights_path)`.
+    - Provides TTA (Test-Time Augmentation) via `predict_with_tta()` and
+      `predict_breed_tta()` for improved accuracy.
 """
 
 import os
@@ -121,6 +125,11 @@ assert len(BREED_MAPPING) == 37, (
 # Matches training preprocessing WITHOUT augmentation.
 # Spec section 12.1: Resize(256) → CenterCrop(224) → ToTensor → Normalize
 # ---------------------------------------------------------------------------
+# Temperature for confidence calibration.
+# Computed by minimizing NLL on the validation set after CutMix training.
+# T < 1 sharpens the overly-smooth softmax distribution caused by soft label training.
+TEMPERATURE: float = 0.25
+
 _preprocess = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -135,11 +144,15 @@ _model: "nn.Module | None" = None
 _model_lock = threading.Lock()
 
 
-def _get_model() -> "nn.Module":
+def _get_model(weights_path: str | None = None) -> "nn.Module":
     """Lazy-load CNN model on first call (~2s), reuse thereafter.
 
     Thread-safe: uses double-checked locking so concurrent requests
     never load the model twice.
+
+    Args:
+        weights_path: Optional path to a .pth weights file. If None,
+            defaults to settings.model_weights_path.
 
     Raises:
         RuntimeError: If the model weights file is missing.
@@ -149,13 +162,12 @@ def _get_model() -> "nn.Module":
         with _model_lock:
             if _model is None:
                 from app.cnn.model import create_model
+                from app.common.config import settings
+
+                if weights_path is None:
+                    weights_path = settings.model_weights_path
 
                 _model = create_model()
-
-                weights_path = os.path.join(
-                    os.path.dirname(__file__), "../../resources/models/pet_cnn.pth"
-                )
-                weights_path = os.path.normpath(weights_path)
 
                 if not os.path.exists(weights_path):
                     raise RuntimeError(
@@ -166,7 +178,7 @@ def _get_model() -> "nn.Module":
                 _model.load_state_dict(state_dict)
                 _model.eval()
 
-                logger.info("CNN model loaded from %s", weights_path)
+                logger.info("cnn_model_loaded", extra={"path": weights_path})
 
     return _model
 
@@ -188,33 +200,53 @@ def _build_top3_entry(idx: int, conf: float) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Core inference logic (device-agnostic helper)
+# ---------------------------------------------------------------------------
+
+def _run_inference(
+    model: nn.Module, device: torch.device, input_tensor: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Run a single forward pass and return (top3_probs, top3_indices)."""
+    model.to(device)
+    input_tensor = input_tensor.to(device)
+
+    with torch.no_grad():
+        logits = model(input_tensor)                      # (1, 37)  raw logits
+        calibrated_logits = logits / TEMPERATURE          # temperature scaling
+        probs = torch.softmax(calibrated_logits, dim=1).squeeze(0)  # (37,)
+
+    top3_probs, top3_indices = torch.topk(probs, 3)
+    return top3_probs, top3_indices
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def predict_breed(image_path: str) -> CNNPredictResult:
-    """Predict pet breed from a single image with confidence thresholding.
+def predict_with_model(model: nn.Module, image_path: str) -> CNNPredictResult:
+    """Predict pet breed using an externally-provided model (DI variant).
 
-    This is THE public entry point called by pet_agent.py for image
-    preprocessing before agent dispatch.
+    This function accepts the model as a parameter instead of relying
+    on the module-level singleton, making it suitable for testing,
+    custom model instances, or scenarios where the caller manages
+    the model lifecycle.
 
     Confidence threshold strategy (spec section 6):
-        >= 85%  → status="success"
-        60-85%  → status="low_confidence"
-        40-60%  → status="low_confidence"
-        < 40%   → status="failed"
+            >= 85%  → status="success"
+            60-85%  → status="low_confidence"
+            40-60%  → status="low_confidence"
+            < 40%   → status="failed"
 
     Args:
+        model: A pre-loaded, eval-mode nn.Module (e.g. from _get_model()).
         image_path: Absolute or relative path to a JPG/PNG pet image.
 
     Returns:
         CNNPredictResult with breed_en, breed_cn, confidence, top3, and status.
-
-    Raises:
-        RuntimeError: If the CNN model weights file is missing (not trained).
     """
     # --- 1. Validate image path ---
     if not os.path.exists(image_path):
-        logger.warning("Image file not found: %s", image_path)
+        logger.warning("image_not_found", extra={"path": image_path})
         return CNNPredictResult(
             breed_en="",
             breed_cn="无法读取图片文件",
@@ -224,11 +256,11 @@ def predict_breed(image_path: str) -> CNNPredictResult:
         )
 
     ext = os.path.splitext(image_path)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png"):
-        logger.warning("Unsupported image format: %s", ext)
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        logger.warning("unsupported_format", extra={"extension": ext})
         return CNNPredictResult(
             breed_en="",
-            breed_cn="请使用 JPG/PNG 格式",
+            breed_cn="请使用 JPG/PNG/WebP 格式",
             confidence=0.0,
             top3=[],
             status="failed",
@@ -238,7 +270,7 @@ def predict_breed(image_path: str) -> CNNPredictResult:
     try:
         image = Image.open(image_path).convert("RGB")
     except Exception as exc:
-        logger.warning("Failed to open image %s: %s", image_path, exc)
+        logger.warning("image_open_failed", extra={"path": image_path, "error": str(exc)})
         return CNNPredictResult(
             breed_en="",
             breed_cn="无法读取图片文件",
@@ -253,20 +285,12 @@ def predict_breed(image_path: str) -> CNNPredictResult:
     # --- 4. Device selection (auto CPU fallback) ---
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cpu":
-        logger.warning("CUDA 不可用，自动降级为 CPU 推理")
+        logger.info("device_selected", extra={"device": "cpu", "reason": "cuda_unavailable"})
 
     # --- 5. Inference ---
-    model = _get_model()
-    model.to(device)
-    input_tensor = input_tensor.to(device)
-
-    with torch.no_grad():
-        logits = model(input_tensor)                  # (1, 37)  raw logits
-        probs = torch.softmax(logits, dim=1).squeeze(0)  # (37,)    convert to probabilities
+    top3_probs, top3_indices = _run_inference(model, device, input_tensor)
 
     # --- 6. Top-3 ---
-    top3_probs, top3_indices = torch.topk(probs, 3)
-
     top1_conf = top3_probs[0].item()
     top3 = [
         _build_top3_entry(top3_indices[i].item(), top3_probs[i].item())
@@ -285,8 +309,13 @@ def predict_breed(image_path: str) -> CNNPredictResult:
         status = "failed"
 
     logger.debug(
-        "predict_breed: %s -> %s (%.1f%%) status=%s",
-        os.path.basename(image_path), top1_cn, top1_conf * 100, status,
+        "prediction_result",
+        extra={
+            "file": os.path.basename(image_path),
+            "breed_cn": top1_cn,
+            "confidence_pct": round(top1_conf * 100, 1),
+            "status": status,
+        },
     )
 
     return CNNPredictResult(
@@ -296,6 +325,125 @@ def predict_breed(image_path: str) -> CNNPredictResult:
         top3=top3,
         status=status,
     )
+
+
+def predict_breed(image_path: str) -> CNNPredictResult:
+    """Predict pet breed from a single image with confidence thresholding.
+
+    This is THE public entry point called by pet_agent.py for image
+    preprocessing before agent dispatch.
+
+    Uses the module-level lazy-loaded model singleton. For dependency
+    injection (testing or custom model instances), use predict_with_model().
+
+    Confidence threshold strategy (spec section 6):
+        >= 85%  → status="success"
+        60-85%  → status="low_confidence"
+        40-60%  → status="low_confidence"
+        < 40%   → status="failed"
+
+    Args:
+        image_path: Absolute or relative path to a JPG/PNG pet image.
+
+    Returns:
+        CNNPredictResult with breed_en, breed_cn, confidence, top3, and status.
+
+    Raises:
+        RuntimeError: If the CNN model weights file is missing (not trained).
+    """
+    model = _get_model()
+    return predict_with_model(model, image_path)
+
+
+# ---------------------------------------------------------------------------
+# Test-Time Augmentation
+# ---------------------------------------------------------------------------
+
+_tta_transform = transforms.Compose([
+    transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+
+def predict_with_tta(model, image_path: str, num_crops: int = 10) -> CNNPredictResult:
+    """Predict pet breed using Test-Time Augmentation (multi-crop ensemble).
+
+    Runs inference on *num_crops* augmented versions of the image and averages
+    the softmax probabilities. This typically improves top-1 accuracy by 1-2%
+    at the cost of num_crops × inference time.
+
+    Args:
+        model: Pre-loaded CNN model (from _get_model or container).
+        image_path: Absolute or relative path to a JPG/PNG pet image.
+        num_crops: Number of augmented crops to average (default 10).
+
+    Returns:
+        CNNPredictResult with ensembled confidence scores.
+    """
+    if not os.path.exists(image_path):
+        return CNNPredictResult(
+            breed_en="", breed_cn="无法读取图片文件",
+            confidence=0.0, top3=[], status="failed",
+        )
+
+    try:
+        image = Image.open(image_path).convert("RGB")
+    except Exception:
+        return CNNPredictResult(
+            breed_en="", breed_cn="无法读取图片文件",
+            confidence=0.0, top3=[], status="failed",
+        )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    model.eval()
+
+    # Collect probabilities from multiple augmented crops
+    all_probs: list[torch.Tensor] = []
+    with torch.no_grad():
+        for _ in range(num_crops):
+            crop = _tta_transform(image).unsqueeze(0).to(device)
+            logits = model(crop)
+            calibrated_logits = logits / TEMPERATURE
+            probs = torch.softmax(calibrated_logits, dim=1)
+            all_probs.append(probs)
+
+    # Average probabilities across all crops
+    avg_probs = torch.stack(all_probs).mean(dim=0).squeeze(0)  # (37,)
+
+    # Extract top-3 from averaged probabilities
+    top3_probs, top3_indices = torch.topk(avg_probs, 3)
+    top1_conf = top3_probs[0].item()
+    top3 = [
+        _build_top3_entry(top3_indices[i].item(), top3_probs[i].item())
+        for i in range(3)
+    ]
+
+    top1_en = CLASS_NAMES[top3_indices[0].item()]
+    top1_cn = BREED_MAPPING.get(_en_to_key(top1_en), top1_en)
+
+    if top1_conf >= 0.85:
+        status = "success"
+    elif top1_conf >= 0.40:
+        status = "low_confidence"
+    else:
+        status = "failed"
+
+    return CNNPredictResult(
+        breed_en=top1_en,
+        breed_cn=top1_cn,
+        confidence=round(top1_conf, 4),
+        top3=top3,
+        status=status,
+    )
+
+
+def predict_breed_tta(image_path: str, num_crops: int = 10) -> CNNPredictResult:
+    """Convenience wrapper: predict_breed with TTA using lazy-loaded model."""
+    model = _get_model()
+    return predict_with_tta(model, image_path, num_crops=num_crops)
 
 
 # ---------------------------------------------------------------------------

@@ -2,10 +2,11 @@ import random
 
 import numpy as np
 import torch
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
+from torchvision.transforms import RandAugment
 from torchvision.datasets import OxfordIIITPet
-from sklearn.model_selection import train_test_split
 
 from app.common.logger import logger
 
@@ -32,8 +33,59 @@ class _TransformSubset(Dataset):
         return len(self.subset)
 
 
+def cutmix_collate_fn(batch, num_classes: int = 37, alpha: float = 1.0):
+    """CutMix collate: randomly mixes pairs of images and labels within the batch.
+
+    Args:
+        batch: List of (image, target) tuples.
+        num_classes: Number of output classes (37 for Oxford Pets).
+        alpha: Beta distribution parameter (higher = stronger mixing).
+
+    Returns:
+        (mixed_images, mixed_labels) — labels become soft one-hot vectors.
+    """
+    images, targets = zip(*batch)
+    images = torch.stack(images)
+    targets = torch.tensor(targets)
+
+    # Random permutation for pairing
+    batch_size = images.size(0)
+    indices = torch.randperm(batch_size)
+    shuffled_images = images[indices]
+    shuffled_targets = targets[indices]
+
+    # Sample lambda from Beta(alpha, alpha)
+    lam = torch.distributions.Beta(alpha, alpha).sample().item()
+    lam = max(lam, 1.0 - lam)  # bounding box: use larger portion
+
+    # CutMix bounding box
+    _, _, H, W = images.shape
+    cx, cy = torch.randint(W, (1,)).item(), torch.randint(H, (1,)).item()
+    cut_w = int(W * (1.0 - lam) ** 0.5)
+    cut_h = int(H * (1.0 - lam) ** 0.5)
+    x1 = max(cx - cut_w // 2, 0)
+    y1 = max(cy - cut_h // 2, 0)
+    x2 = min(cx + cut_w // 2, W)
+    y2 = min(cy + cut_h // 2, H)
+
+    # Replace the region with shuffled image
+    images[:, :, y1:y2, x1:x2] = shuffled_images[:, :, y1:y2, x1:x2]
+
+    # Adjust lambda based on actual area
+    lam = 1.0 - ((x2 - x1) * (y2 - y1)) / (H * W)
+
+    # Soft labels
+    targets_one_hot = torch.zeros(batch_size, num_classes)
+    shuffled_one_hot = torch.zeros(batch_size, num_classes)
+    targets_one_hot.scatter_(1, targets.unsqueeze(1), 1)
+    shuffled_one_hot.scatter_(1, shuffled_targets.unsqueeze(1), 1)
+    mixed_targets = lam * targets_one_hot + (1.0 - lam) * shuffled_one_hot
+
+    return images, mixed_targets
+
+
 def create_dataloaders(
-    data_root: str, batch_size: int = 32
+    data_root: str, batch_size: int = 32, use_cutmix: bool = True
 ) -> tuple[DataLoader, DataLoader, DataLoader, int]:
     """Create stratified train/val/test DataLoaders for Oxford-IIIT Pet Dataset.
 
@@ -43,6 +95,7 @@ def create_dataloaders(
     Args:
         data_root: Root directory for the dataset (auto-downloads on first use).
         batch_size: Batch size for all DataLoaders.
+        use_cutmix: If True, use CutMix collate for train batches.
 
     Returns:
         (train_loader, val_loader, test_loader, num_classes)
@@ -51,10 +104,9 @@ def create_dataloaders(
     train_augment = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2),
-        transforms.RandomRotation(15),
+        RandAugment(num_ops=2, magnitude=9),  # AutoAugment variant, strong
         transforms.ToTensor(),
-        transforms.RandomErasing(p=0.3, scale=(0.02, 0.15), ratio=(0.3, 3.3)),
+        transforms.RandomErasing(p=0.3, scale=(0.02, 0.15)),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         ),
@@ -120,7 +172,8 @@ def create_dataloaders(
     )
 
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=0,
+        collate_fn=cutmix_collate_fn if use_cutmix else None,
     )
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False, num_workers=0

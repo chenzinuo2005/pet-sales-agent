@@ -20,9 +20,14 @@ frontend/dist/
 
 # Database & data files
 resources/pet_agent.db
+resources/pet_agent.db-shm
+resources/pet_agent.db-wal
+resources/chroma_db/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
 
 # LangGraph runtime files
 .langgraph_api/
@@ -34,12 +39,19 @@ resources/pet_agent.db
 
 # CNN model weights (large files)
 *.pth
+resources/models/
+
+# Generated outputs
+resources/outputs/
 
 # Logs
 *.log
 
 # Test cache
 .pytest_cache/
+
+# Local documents
+文档.txt
 
 # OS
 .DS_Store

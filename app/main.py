@@ -3,34 +3,27 @@ import argparse
 import os
 import sys
 
-# Windows: reconfigure stdout to UTF-8 to handle emoji/Chinese
-sys.stdout.reconfigure(encoding="utf-8")
-
 from dotenv import load_dotenv
 
-from app.common.logger import setup_logging, logger
+# ── Centralized .env loading (single call site) ──
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
+# Windows: reconfigure stdout to UTF-8 to handle emoji/Chinese
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
-def validate_env() -> None:
-    """验证必填环境变量，缺失时 exit code 2"""
-    required_vars = [
-        "DEEPSEEK_API_KEY",
-        "DEEPSEEK_BASE_URL",
-        "DASHSCOPE_API_KEY",
-        "TAVILY_API_KEY",
-    ]
-    missing = [v for v in required_vars if not os.getenv(v)]
-    if missing:
-        logger.error(f"缺少环境变量: {', '.join(missing)}, 请检查 .env")
-        sys.exit(2)
+from app.common.config import settings
+from app.common.logger import logger, setup_logging
 
 
 def cmd_chat(args: argparse.Namespace) -> None:
     """交互对话模式"""
-    validate_env()
-    from app.agents.pet_agent import chat_with_agent
+    _ = settings.deepseek_api_key  # trigger Pydantic validation on access
+    from app.agents.pet_agent import chat_with_container
+    from app.common.container import get_container
 
-    thread_id = "default" if not args.new_session else None  # None → 生成新 UUID
+    container = get_container()
+    thread_id = "default" if not args.new_session else ""  # "" → 生成新 UUID
     print("小宠: 你好！我是萌宠之家的智能客服小宠，有什么可以帮你的？(输入 /quit 退出)")
 
     while True:
@@ -71,7 +64,7 @@ def cmd_chat(args: argparse.Namespace) -> None:
 
         # 流式输出回复
         print("\n小宠: ", end="", flush=True)
-        for token in chat_with_agent(message, image_path, thread_id):
+        for token in chat_with_container(container, message, image_path, thread_id):
             print(token, end="", flush=True)
         print()
 
@@ -109,7 +102,6 @@ def cmd_predict_cnn(args: argparse.Namespace) -> None:
 
 def cmd_init_rag(args: argparse.Namespace) -> None:
     """初始化 RAG 向量库"""
-    validate_env()
     from app.agents.rag_tools import init_vector_store
 
     logger.info("初始化 RAG 向量库...")
@@ -130,7 +122,6 @@ def cmd_serve(args: argparse.Namespace) -> None:
 
 def main() -> None:
     setup_logging()
-    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
     parser = argparse.ArgumentParser(
         prog="pet",

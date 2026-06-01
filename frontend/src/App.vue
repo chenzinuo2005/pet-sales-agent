@@ -7,7 +7,7 @@ import ImagePreview from './components/ImagePreview.vue'
 import Sidebar from './components/Sidebar.vue'
 import PawPrints from './components/PawPrints.vue'
 
-const { getThreadId, setThreadId, clearThreadId } = useSession()
+const { getThreadId, setThreadId } = useSession()
 
 const messages = ref([])
 const threadId = ref(getThreadId())
@@ -93,7 +93,6 @@ async function sendMessage(_text) {
 
       for (const line of lines) {
         if (!line.trim()) {
-          // Empty line = end of SSE event
           if (currentEvent === 'token' && currentData) {
             streamingContent.value += currentData
           } else if (currentEvent === 'done') {
@@ -169,17 +168,37 @@ async function clearHistory() {
 <template>
   <div class="chat-app">
     <PawPrints />
+
     <header class="chat-header">
-      <h1 class="chat-title">萌宠之家</h1>
+      <div class="header-left">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <circle cx="10" cy="12" r="3" fill="currentColor" opacity="0.6"/>
+            <circle cx="22" cy="12" r="3" fill="currentColor" opacity="0.6"/>
+            <ellipse cx="16" cy="20" rx="6" ry="4.5" fill="currentColor" opacity="0.4"/>
+            <path d="M6 22c2 4 5 7 10 7s8-3 10-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+        </div>
+        <h1 class="chat-title">萌宠之家</h1>
+      </div>
       <Sidebar @new-session="newSession" @clear-history="clearHistory" />
     </header>
 
     <main class="chat-main" ref="messageContainer">
       <div class="messages">
         <div v-if="messages.length === 0 && !isStreaming" class="welcome">
-          <div class="welcome-icon">🐾</div>
-          <h2>欢迎来到萌宠之家</h2>
-          <p>我是您的专属宠物顾问，有什么可以帮您的？</p>
+          <div class="welcome-hero">
+            <div class="welcome-icon">
+              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                <circle cx="22" cy="24" r="6" fill="var(--color-primary)" opacity="0.3"/>
+                <circle cx="42" cy="24" r="6" fill="var(--color-primary)" opacity="0.3"/>
+                <ellipse cx="32" cy="40" rx="12" ry="9" fill="var(--color-primary)" opacity="0.15"/>
+                <path d="M12 44c4 8 10 14 20 14s16-6 20-14" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+              </svg>
+            </div>
+            <h2 class="welcome-heading">欢迎来到萌宠之家</h2>
+            <p class="welcome-sub">我是您的专属宠物顾问，上传宠物照片或直接提问吧</p>
+          </div>
           <div class="suggestions">
             <button
               v-for="q in ['推荐适合新手的宠物', '狗狗掉毛怎么办', '猫咪需要打哪些疫苗']"
@@ -238,93 +257,125 @@ async function clearHistory() {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  background: var(--color-canvas);
 }
 
+/* ── Header ── */
 .chat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  height: 64px;
+  padding: 0 var(--space-lg);
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
   flex-shrink: 0;
   z-index: 10;
 }
 
-.chat-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  color: var(--color-primary);
-  font-weight: 400;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
+.logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--rounded-sm);
+  background: var(--color-surface-soft);
+  color: var(--color-primary);
+}
+
+.chat-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-ink);
+  letter-spacing: -0.18px;
+}
+
+/* ── Main scroll area ── */
 .chat-main {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 0;
+  padding: var(--space-lg) 0;
+  background: var(--color-canvas);
 }
 
 .messages {
-  max-width: 800px;
+  max-width: 768px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-base);
 }
 
+/* ── Welcome ── */
 .welcome {
   text-align: center;
-  padding: 48px 16px;
-  animation: fadeInUp 0.6s ease;
+  padding: var(--space-xxl) var(--space-base);
+  animation: fadeInUp 0.5s ease;
+}
+
+.welcome-hero {
+  margin-bottom: var(--space-xl);
 }
 
 .welcome-icon {
-  font-size: 56px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-lg);
 }
 
-.welcome h2 {
+.welcome-heading {
   font-family: var(--font-display);
-  font-size: 24px;
-  color: var(--color-primary);
-  margin-bottom: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.43;
+  margin-bottom: var(--space-sm);
 }
 
-.welcome p {
-  color: var(--color-text-muted);
-  font-size: 15px;
-  margin-bottom: 24px;
+.welcome-sub {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--color-muted);
+  line-height: 1.5;
 }
 
 .suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-sm);
   justify-content: center;
 }
 
 .suggestion-chip {
-  padding: 8px 18px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-btn);
+  padding: 10px 20px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-full);
   font-size: 14px;
-  color: var(--color-text);
-  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--color-ink);
+  line-height: 1.29;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .suggestion-chip:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: #FFF5EC;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-float);
 }
 
+/* ── Footer ── */
 .chat-footer {
   flex-shrink: 0;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
-  padding: 12px 20px;
+  background: var(--color-canvas);
+  border-top: 1px solid var(--color-hairline);
+  padding: var(--space-base) var(--space-lg);
   z-index: 10;
 }
 </style>

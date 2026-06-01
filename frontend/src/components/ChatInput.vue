@@ -2,14 +2,8 @@
 import { ref, watch } from 'vue'
 
 const props = defineProps({
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-  hasImage: {
-    type: Boolean,
-    default: false,
-  },
+  disabled: { type: Boolean, default: false },
+  hasImage:  { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['send', 'image-selected'])
@@ -47,9 +41,7 @@ function handleKeydown(e) {
 
 function handleFileChange(e) {
   const file = e.target.files?.[0]
-  if (file) {
-    emit('image-selected', file)
-  }
+  if (file) emit('image-selected', file)
   e.target.value = ''
 }
 
@@ -60,38 +52,54 @@ function onDrop(e) {
   }
 }
 
-function onDragOver(e) {
-  e.preventDefault()
-}
+function onDragOver(e) { e.preventDefault() }
 </script>
 
 <template>
   <div class="chat-input" @drop.prevent="onDrop" @dragover="onDragOver">
-    <div class="input-wrapper">
-      <label class="image-btn" title="上传宠物图片" aria-label="上传宠物图片">
-        📷
+    <div class="input-wrapper" :class="{ 'input-wrapper--focused': false }">
+      <!-- Photo upload -->
+      <label class="attach-btn" for="pet-image-upload" title="上传宠物图片" aria-label="上传宠物图片">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M21 15l-5-5L5 21"/>
+        </svg>
         <input
+          id="pet-image-upload"
+          name="pet-image-upload"
           type="file"
           accept="image/jpeg,image/png"
           class="file-input"
           @change="handleFileChange"
         />
       </label>
+
+      <!-- Text area -->
       <textarea
+        id="chat-message-input"
+        name="message"
         ref="textareaRef"
         v-model="text"
         class="input-field"
         :disabled="disabled"
-        placeholder="输入消息，或拖拽/上传宠物图片..."
+        placeholder="输入消息，或拖拽上传宠物图片..."
         rows="1"
+        autocomplete="off"
         @keydown="handleKeydown"
       ></textarea>
+
+      <!-- Send orb — Airbnb search-orb inspired -->
       <button
-        class="send-btn"
+        class="send-orb"
         :disabled="disabled || (!text.trim() && !hasImage)"
         @click="handleSend"
+        aria-label="发送消息"
       >
-        🐾
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
       </button>
     </div>
   </div>
@@ -99,88 +107,98 @@ function onDragOver(e) {
 
 <style scoped>
 .chat-input {
-  max-width: 800px;
+  max-width: 768px;
   margin: 0 auto;
   width: 100%;
 }
 
+/* Pill wrapper — Airbnb search-bar-pill inspired */
 .input-wrapper {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  background: var(--color-bg);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-input);
-  padding: 6px 8px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  gap: var(--space-sm);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-full);
+  padding: 6px 6px 6px 16px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: rgba(0,0,0,0.02) 0 0 0 1px, rgba(0,0,0,0.04) 0 2px 6px;
 }
 
 .input-wrapper:focus-within {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(244, 164, 96, 0.1);
+  border-color: var(--color-ink);
+  box-shadow: rgba(0,0,0,0.02) 0 0 0 1px,
+              rgba(0,0,0,0.04) 0 2px 6px,
+              rgba(0,0,0,0.1) 0 4px 8px;
 }
 
-.image-btn {
+/* Photo button */
+.attach-btn {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  border-radius: 50%;
-  transition: background 0.2s ease;
-  color: var(--color-text-muted);
+  border-radius: var(--rounded-full);
+  color: var(--color-muted);
   cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
-.image-btn:hover {
-  background: var(--color-border);
-  color: var(--color-accent);
+.attach-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-soft);
 }
 
-.file-input {
-  display: none;
-}
+.file-input { display: none; }
 
+/* Text field */
 .input-field {
   flex: 1;
   font-size: 15px;
+  font-weight: 400;
   line-height: 1.5;
-  padding: 4px 4px;
-  color: var(--color-text);
+  padding: 7px 4px;
+  color: var(--color-ink);
   min-height: 24px;
   max-height: 72px;
 }
 
 .input-field::placeholder {
-  color: var(--color-text-muted);
-  opacity: 0.6;
+  color: var(--color-muted);
+  opacity: 0.7;
+  font-weight: 400;
 }
 
 .input-field:disabled {
   opacity: 0.5;
 }
 
-.send-btn {
+/* Send orb — the single Rausch moment */
+.send-orb {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  border-radius: 50%;
+  border-radius: var(--rounded-full);
   background: var(--color-primary);
-  transition: background 0.2s ease, opacity 0.2s ease;
+  color: var(--color-on-primary);
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
-.send-btn:hover:not(:disabled) {
-  background: #7A4E2E;
+.send-orb:hover:not(:disabled) {
+  background: var(--color-primary-active);
 }
 
-.send-btn:disabled {
-  opacity: 0.4;
+.send-orb:active:not(:disabled) {
+  transform: scale(0.93);
+}
+
+.send-orb:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 </style>

@@ -1,17 +1,17 @@
 <script setup>
-// Pure decorative component — no logic needed
+// Decorative background — subtle paw prints floating across the canvas
 </script>
 
 <template>
   <div class="paw-prints" aria-hidden="true">
-    <span class="paw paw--1"></span>
-    <span class="paw paw--2"></span>
-    <span class="paw paw--3"></span>
-    <span class="paw paw--4"></span>
-    <span class="paw paw--5"></span>
-    <span class="paw paw--6"></span>
-    <span class="paw paw--7"></span>
-    <span class="paw paw--8"></span>
+    <span class="paw paw--1" />
+    <span class="paw paw--2" />
+    <span class="paw paw--3" />
+    <span class="paw paw--4" />
+    <span class="paw paw--5" />
+    <span class="paw paw--6" />
+    <span class="paw paw--7" />
+    <span class="paw paw--8" />
   </div>
 </template>
 
@@ -28,9 +28,9 @@
   position: absolute;
   width: 40px;
   height: 40px;
-  opacity: 0.04;
+  opacity: 0.03;
   background: var(--color-primary);
-  animation: float 8s ease-in-out infinite;
+  animation: float 10s ease-in-out infinite;
 }
 
 .paw::before,
@@ -41,7 +41,7 @@
   border-radius: 50%;
 }
 
-/* main pad */
+/* Main pad */
 .paw::before {
   width: 20px;
   height: 22px;
@@ -51,7 +51,7 @@
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
 }
 
-/* toe pads */
+/* Toe pads */
 .paw::after {
   width: 35px;
   height: 18px;
@@ -66,18 +66,16 @@
   border-radius: 0;
 }
 
-.paw--1 { top: 10%; left: 10%; animation-delay: 0s; }
-.paw--2 { top: 25%; left: 85%; animation-delay: 1s; transform: rotate(30deg); }
-.paw--3 { top: 50%; left: 5%; animation-delay: 2s; transform: rotate(-20deg); }
-.paw--4 { top: 70%; left: 90%; animation-delay: 3s; transform: rotate(45deg); }
-.paw--5 { top: 15%; left: 50%; animation-delay: 4s; transform: rotate(-35deg); }
-.paw--6 { top: 60%; left: 40%; animation-delay: 5s; transform: rotate(15deg); }
-.paw--7 { top: 85%; left: 20%; animation-delay: 6s; transform: rotate(-10deg); }
-.paw--8 { top: 40%; left: 70%; animation-delay: 7s; transform: rotate(25deg); }
+.paw--1 { top: 8%;  left: 8%;  animation-delay: 0s; }
+.paw--2 { top: 22%; left: 88%; animation-delay: 1.2s; transform: rotate(30deg); }
+.paw--3 { top: 48%; left: 4%;  animation-delay: 2.4s; transform: rotate(-20deg); }
+.paw--4 { top: 72%; left: 92%; animation-delay: 3.6s; transform: rotate(45deg); }
+.paw--5 { top: 12%; left: 52%; animation-delay: 4.8s; transform: rotate(-35deg); }
+.paw--6 { top: 58%; left: 38%; animation-delay: 6s;   transform: rotate(15deg); }
+.paw--7 { top: 88%; left: 18%; animation-delay: 7.2s; transform: rotate(-10deg); }
+.paw--8 { top: 36%; left: 72%; animation-delay: 8.4s; transform: rotate(25deg); }
 
-@media (max-width: 768px) {
-  .paw-prints {
-    display: none;
-  }
+@media (max-width: 744px) {
+  .paw-prints { display: none; }
 }
 </style>

@@ -1,9 +1,6 @@
 <script setup>
 defineProps({
-  url: {
-    type: String,
-    required: true,
-  },
+  url: { type: String, required: true },
 })
 
 const emit = defineEmits(['remove'])
@@ -14,7 +11,10 @@ const emit = defineEmits(['remove'])
     <div class="preview-wrapper">
       <img :src="url" alt="预览图片" class="preview-img" />
       <button class="remove-btn" @click="emit('remove')" title="移除图片">
-        <span class="remove-icon">&#10005;</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
       </button>
     </div>
   </div>
@@ -24,7 +24,7 @@ const emit = defineEmits(['remove'])
 .image-preview {
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-sm);
 }
 
 .preview-wrapper {
@@ -33,43 +33,34 @@ const emit = defineEmits(['remove'])
 }
 
 .preview-img {
-  max-height: 120px;
+  max-height: 108px;
   max-width: 200px;
-  border-radius: var(--radius-card);
-  border: 2px solid var(--color-border);
+  border-radius: var(--rounded-md);
+  border: 1px solid var(--color-hairline);
   object-fit: cover;
   display: block;
 }
 
 .remove-btn {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--rounded-full);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-soft);
-  transition: all 0.2s ease;
+  color: var(--color-muted);
+  box-shadow: var(--shadow-float);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .remove-btn:hover {
-  background: var(--color-error);
-  border-color: var(--color-error);
-  color: #fff;
-}
-
-.remove-icon {
-  font-size: 12px;
-  line-height: 1;
-  color: var(--color-text-muted);
-}
-
-.remove-btn:hover .remove-icon {
-  color: #fff;
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-on-primary);
 }
 </style>

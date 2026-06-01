@@ -1,6 +1,6 @@
 """CNN model: EfficientNet-B0 backbone (ImageNet pretrained) + custom classifier."""
 import torch.nn as nn
-from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
 
 from app.common.logger import logger
 
@@ -18,14 +18,14 @@ def create_model(num_classes: int = 37) -> nn.Module:
     """
     model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
 
-    # Replace classifier: 1280 -> 256 -> num_classes
+    # Replace classifier: 1280 -> 512 -> num_classes
     in_features = model.classifier[1].in_features
     model.classifier = nn.Sequential(
-        nn.Dropout(0.3, inplace=True),
-        nn.Linear(in_features, 256),
+        nn.Dropout(0.2, inplace=True),
+        nn.Linear(in_features, 512),
         nn.ReLU(inplace=True),
-        nn.Dropout(0.3),
-        nn.Linear(256, num_classes),
+        nn.Dropout(0.2),
+        nn.Linear(512, num_classes),
     )
 
     logger.info("EfficientNet-B0 created (pretrained ImageNet, %d classes)", num_classes)
@@ -44,6 +44,7 @@ def count_parameters(model: nn.Module) -> tuple[int, int]:
 
 if __name__ == "__main__":
     import torch
+
     from app.common.logger import setup_logging
     setup_logging()
 

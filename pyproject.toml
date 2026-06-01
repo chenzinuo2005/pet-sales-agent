@@ -4,40 +4,74 @@ version = "0.1.0"
 description = "宠物销售智能客服助手"
 requires-python = ">=3.13"
 dependencies = [
-    "dashscope>=1.25.0",
-    "langchain>=1.2.0",
-    "langchain-chroma>=1.1.0",
-    "langchain-community>=0.4.0",
-    "langchain-openai>=1.2.2",
-    "langchain-tavily>=0.2.0",
-    "langgraph>=1.0.0",
-    "langgraph-checkpoint-sqlite>=3.0.0",
-    "openai>=2.15.0",
-    "matplotlib>=3.10.0",
-    "pillow>=11.0.0",
-    "python-dotenv>=1.2.0",
-    "scikit-learn>=1.6.0",
-    "seaborn>=0.13.0",
-    "sentence-transformers>=4.0.0",
-    "torch>=2.6.0",
-    "torchvision>=0.21.0",
-    "fastapi>=0.136.3",
-    "uvicorn[standard]>=0.48.0",
-    "python-multipart>=0.0.29",
+    "dashscope>=1.25.0,<2.0",
+    "langchain>=1.2.0,<2.0",
+    "langchain-chroma>=1.1.0,<2.0",
+    "langchain-community>=0.4.0,<1.0",
+    "langchain-openai>=1.2.2,<2.0",
+    "langchain-tavily>=0.2.0,<1.0",
+    "langgraph>=1.0.0,<2.0",
+    "langgraph-checkpoint-sqlite>=3.0.0,<4.0",
+    "openai>=2.15.0,<3.0",
+    "matplotlib>=3.10.0,<4.0",
+    "pillow>=11.0.0,<12.0",
+    "pydantic-settings>=2.0,<3.0",
+    "python-dotenv>=1.2.0,<2.0",
+    "scikit-learn>=1.6.0,<2.0",
+    "seaborn>=0.13.0,<1.0",
+    "sentence-transformers>=4.0.0,<5.0",
+    "torch>=2.6.0,<3.0",
+    "torchvision>=0.21.0,<1.0",
+    "fastapi>=0.136.3,<1.0",
+    "uvicorn[standard]>=0.48.0,<1.0",
+    "python-multipart>=0.0.29,<1.0",
 ]
 
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cuda" }
+torchvision = { index = "pytorch-cuda" }
+
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3",
-    "pytest-cov>=7.0.0",
-    "pytest-asyncio>=1.0.0",
+    "pytest>=9.0.3,<10.0",
+    "pytest-cov>=7.0.0,<8.0",
+    "pytest-asyncio>=1.0.0,<2.0",
+    "ruff>=0.8.0,<1.0",
+    "mypy>=1.0,<2.0",
 ]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+lint.select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+lint.ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.13"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["tests/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 addopts = "-v --tb=short"
+markers = [
+    "slow: slow tests that require GPU or network",
+    "integration: tests that require external services",
+]

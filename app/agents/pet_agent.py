@@ -1,40 +1,13 @@
+"""Core LangGraph agent — chat logic (DI-ready)."""
+import uuid
 from collections.abc import Generator
 
-from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage, AIMessageChunk, AIMessage
-from langchain.agents import create_agent
-from langgraph.checkpoint.sqlite import SqliteSaver
-from app.common.logger import logger
-from app.agents.custom_tools import search_pet_knowledge, tavily_web_search
-from app.agents.system_prompt import SYSTEM_PROMPT
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage
+
+from app.common.logger import get_logger
 from app.models.schemas import CNNPredictResult
-import os
-import sqlite3
-import uuid
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-model = init_chat_model(
-    model="deepseek-reasoner",
-    model_provider="openai",
-    base_url=os.getenv("DEEPSEEK_BASE_URL"),
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    temperature=0.7,
-)
-
-db_path = os.path.join(os.path.dirname(__file__), "../../resources/pet_agent.db")
-connection = sqlite3.connect(db_path, check_same_thread=False)
-checkpointer = SqliteSaver(connection)
-checkpointer.setup()
-
-agent = create_agent(
-    model=model,
-    tools=[search_pet_knowledge, tavily_web_search],
-    checkpointer=checkpointer,
-    system_prompt=SYSTEM_PROMPT,
-)
+logger = get_logger(__name__)
 
 
 def _build_breed_hint(result: CNNPredictResult) -> str:
@@ -59,15 +32,23 @@ def _build_breed_hint(result: CNNPredictResult) -> str:
         return f"[系统: 图片识别结果 - 置信度较低，仅供参考: {top3_str}]"
 
 
-def chat_with_agent(message: str, image_path: str, thread_id: str) -> Generator[str, None, None]:
-    """流式调用 Agent 聊天，逐 token 返回回复。
+def chat_with_agent(
+    agent,
+    checkpointer,
+    message: str,
+    image_path: str | None = None,
+    thread_id: str = "",
+) -> Generator[str]:
+    """流式调用 Agent 聊天。
 
     Args:
+        agent: LangGraph agent instance (injected)
+        checkpointer: SqliteSaver instance (injected)
         message: 用户输入文本
         image_path: 图片本地路径（可空）
         thread_id: 会话 ID（空时自动生成 UUID）
     """
-    logger.info(f"[用户]: {message}, image: {image_path}, thread_id: {thread_id}")
+    logger.info("user_message", extra={"user_message": message, "image_path": image_path, "thread_id": thread_id})
     try:
         if not thread_id:
             thread_id = str(uuid.uuid4())
@@ -82,48 +63,37 @@ def chat_with_agent(message: str, image_path: str, thread_id: str) -> Generator[
                 augmented_message = (
                     f"{breed_hint}\n用户问题: {message or '这是什么品种？'}"
                 )
-            except (ImportError, FileNotFoundError) as e:
-                logger.warning(f"CNN 模型不可用: {e}，直接传递用户问题")
             except Exception as e:
-                logger.warning(f"图片识别失败: {e}，直接传递用户问题")
+                logger.warning("cnn_inference_failed", extra={"error": str(e)})
 
-        msg = HumanMessage(content=augmented_message)
-
-        for chunk, metadata in agent.stream(
-            {"messages": [msg]},
+        for chunk, _metadata in agent.stream(
+            {"messages": [HumanMessage(content=augmented_message)]},
             {"configurable": {"thread_id": thread_id}},
             stream_mode="messages",
         ):
             if isinstance(chunk, AIMessageChunk) and chunk.content:
                 yield chunk.content
-
     except Exception as e:
-        logger.error(f"Agent 错误: {e}")
+        logger.error("agent_error", extra={"error": str(e)})
         yield "小宠正在休息，请稍后再试"
 
 
-def clear_messages(thread_id: str) -> None:
+def clear_messages(checkpointer, thread_id: str) -> None:
     """清空会话历史。"""
-    logger.info(f"清空历史消息，thread_id: {thread_id}")
     checkpointer.delete_thread(thread_id)
 
 
-def get_messages(thread_id: str) -> list[dict[str, str]]:
-    """获取会话历史，返回 [{\"role\": str, \"content\": str}] 格式。"""
-    logger.info(f"获取历史消息，thread_id: {thread_id}")
-
+def get_messages(checkpointer, thread_id: str) -> list[dict[str, str]]:
+    """获取会话历史。"""
     checkpoint = checkpointer.get({"configurable": {"thread_id": thread_id}})
     if not checkpoint:
         return []
-
     channel_values = checkpoint.get("channel_values")
     if not channel_values:
         return []
-
     messages = channel_values.get("messages", [])
     if not messages:
         return []
-
     result = []
     for msg in messages:
         if not msg.content:
@@ -132,5 +102,27 @@ def get_messages(thread_id: str) -> list[dict[str, str]]:
             result.append({"role": "user", "content": msg.content})
         elif isinstance(msg, AIMessage):
             result.append({"role": "assistant", "content": msg.content})
-
     return result
+
+
+# ---- Container-based convenience wrappers (for CLI / simpler callers) ----
+
+def chat_with_container(container, message: str, image_path: str | None = None, thread_id: str = "") -> Generator[str]:
+    """Convenience: chat using the DI container to resolve agent/checkpointer."""
+    return chat_with_agent(
+        agent=container.get_agent(),
+        checkpointer=container.get_checkpointer(),
+        message=message,
+        image_path=image_path,
+        thread_id=thread_id,
+    )
+
+
+def clear_messages_with_container(container, thread_id: str) -> None:
+    """Convenience: clear history using the DI container."""
+    clear_messages(container.get_checkpointer(), thread_id)
+
+
+def get_messages_with_container(container, thread_id: str) -> list[dict[str, str]]:
+    """Convenience: get history using the DI container."""
+    return get_messages(container.get_checkpointer(), thread_id)

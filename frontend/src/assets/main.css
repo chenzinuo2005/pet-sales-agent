@@ -1,20 +1,58 @@
+/* ── Airbnb Design System Tokens ── */
 :root {
-  --color-primary: #8B5E3C;
-  --color-secondary: #D4A574;
-  --color-bg: #FFF8F0;
-  --color-surface: #FFFFFF;
-  --color-text: #3C2415;
-  --color-text-muted: #8B7355;
-  --color-accent: #F4A460;
-  --color-border: #E8D5C4;
-  --color-success: #7CB342;
-  --color-error: #E57373;
-  --radius-card: 12px;
-  --radius-btn: 20px;
-  --radius-input: 16px;
-  --shadow-soft: 0 2px 12px rgba(139, 94, 60, 0.08);
-  --font-display: 'ZCOOL KuaiLe', cursive;
-  --font-body: 'Noto Sans SC', sans-serif;
+  /* Brand */
+  --color-primary: #ff385c;
+  --color-primary-active: #e00b41;
+  --color-primary-disabled: #ffd1da;
+
+  /* Surface */
+  --color-canvas: #ffffff;
+  --color-surface-soft: #f7f7f7;
+  --color-surface-strong: #f2f2f2;
+
+  /* Text — never pure black */
+  --color-ink: #222222;
+  --color-body: #3f3f3f;
+  --color-muted: #6a6a6a;
+  --color-muted-soft: #929292;
+  --color-on-primary: #ffffff;
+
+  /* Borders */
+  --color-hairline: #dddddd;
+  --color-hairline-soft: #ebebeb;
+  --color-border-strong: #c1c1c1;
+
+  /* Semantic */
+  --color-error: #c13515;
+  --color-link: #428bff;
+
+  /* Typography — Inter as Airbnb Cereal VF substitute, Noto Sans SC for CJK */
+  --font-display: 'Inter', 'Noto Sans SC', -apple-system, system-ui, Roboto, sans-serif;
+  --font-body: 'Inter', 'Noto Sans SC', -apple-system, system-ui, Roboto, sans-serif;
+
+  /* Spacing — 8px base */
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 64px;
+
+  /* Radius — Airbnb soft shape language */
+  --rounded-xs: 4px;
+  --rounded-sm: 8px;
+  --rounded-md: 14px;
+  --rounded-lg: 20px;
+  --rounded-xl: 32px;
+  --rounded-full: 9999px;
+
+  /* Elevation — single shadow tier */
+  --shadow-float: rgba(0,0,0,0.02) 0 0 0 1px,
+                  rgba(0,0,0,0.04) 0 2px 6px,
+                  rgba(0,0,0,0.1) 0 4px 8px;
 }
 
 * {
@@ -25,10 +63,15 @@
 
 body {
   font-family: var(--font-body);
-  background: var(--color-bg);
-  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  background: var(--color-canvas);
+  color: var(--color-ink);
   height: 100vh;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #app {
@@ -39,18 +82,20 @@ body {
 
 button {
   font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
   border: none;
   cursor: pointer;
   outline: none;
   background: none;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 button:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
-textarea {
+textarea, input {
   font-family: var(--font-body);
   outline: none;
   border: none;
@@ -58,51 +103,35 @@ textarea {
   background: transparent;
 }
 
-input {
-  font-family: var(--font-body);
-  outline: none;
-}
-
 a {
-  color: var(--color-primary);
-  text-decoration: none;
+  color: var(--color-ink);
+  text-decoration: underline;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-}
+/* Scrollbar — Airbnb subtle */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-hairline); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted-soft); }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-secondary);
-}
-
+/* Keyframes */
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-10px) rotate(5deg); }
-  75% { transform: translateY(5px) rotate(-5deg); }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(-8px) rotate(3deg); }
+  75%      { transform: translateY(4px) rotate(-3deg); }
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

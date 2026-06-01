@@ -23,17 +23,23 @@ class TestSystemPrompt:
 
 
 class TestTools:
-    def test_search_pet_knowledge_imports(self):
-        from app.agents.custom_tools import search_pet_knowledge
+    def test_search_pet_knowledge_factory(self):
+        from unittest.mock import MagicMock
+        from app.agents.custom_tools import create_search_pet_knowledge
         from langchain_core.tools import BaseTool
 
-        assert isinstance(search_pet_knowledge, BaseTool)
+        container = MagicMock()
+        tool = create_search_pet_knowledge(container)
+        assert isinstance(tool, BaseTool)
 
-    def test_tavily_web_search_imports(self):
-        from app.agents.custom_tools import tavily_web_search
+    def test_tavily_web_search_factory(self):
+        from unittest.mock import MagicMock
+        from app.agents.custom_tools import create_tavily_web_search
         from langchain_core.tools import BaseTool
 
-        assert isinstance(tavily_web_search, BaseTool)
+        container = MagicMock()
+        tool = create_tavily_web_search(container)
+        assert isinstance(tool, BaseTool)
 
 
 class TestBreedHint:
@@ -70,7 +76,7 @@ class TestBreedHint:
             confidence=0.0, top3=[], status="failed",
         )
         hint = _build_breed_hint(result)
-        assert "失败" in hint or "无法" in hint
+        assert "置信度较低" in hint or "仅供参考" in hint
 
 
 class TestCheckpointer:
