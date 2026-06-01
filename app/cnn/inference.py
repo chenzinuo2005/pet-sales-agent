@@ -293,11 +293,11 @@ def predict_with_model(model: nn.Module, image_path: str) -> CNNPredictResult:
     # --- 6. Top-3 ---
     top1_conf = top3_probs[0].item()
     top3 = [
-        _build_top3_entry(top3_indices[i].item(), top3_probs[i].item())
+        _build_top3_entry(top3_indices[i].item(), top3_probs[i].item())  # type: ignore[arg-type]
         for i in range(3)
     ]
 
-    top1_en = CLASS_NAMES[top3_indices[0].item()]
+    top1_en = CLASS_NAMES[top3_indices[0].item()]  # type: ignore[index]
     top1_cn = BREED_MAPPING.get(_en_to_key(top1_en), top1_en)
 
     # --- 7. Confidence threshold strategy ---
@@ -323,7 +323,7 @@ def predict_with_model(model: nn.Module, image_path: str) -> CNNPredictResult:
         breed_cn=top1_cn,
         confidence=round(top1_conf, 4),
         top3=top3,
-        status=status,
+        status=status,  # type: ignore[arg-type]
     )
 
 
@@ -417,11 +417,11 @@ def predict_with_tta(model, image_path: str, num_crops: int = 10) -> CNNPredictR
     top3_probs, top3_indices = torch.topk(avg_probs, 3)
     top1_conf = top3_probs[0].item()
     top3 = [
-        _build_top3_entry(top3_indices[i].item(), top3_probs[i].item())
+        _build_top3_entry(top3_indices[i].item(), top3_probs[i].item())  # type: ignore[arg-type]
         for i in range(3)
     ]
 
-    top1_en = CLASS_NAMES[top3_indices[0].item()]
+    top1_en = CLASS_NAMES[top3_indices[0].item()]  # type: ignore[index]
     top1_cn = BREED_MAPPING.get(_en_to_key(top1_en), top1_en)
 
     if top1_conf >= 0.85:
@@ -436,7 +436,7 @@ def predict_with_tta(model, image_path: str, num_crops: int = 10) -> CNNPredictR
         breed_cn=top1_cn,
         confidence=round(top1_conf, 4),
         top3=top3,
-        status=status,
+        status=status,  # type: ignore[arg-type]
     )
 
 

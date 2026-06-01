@@ -1,7 +1,8 @@
 """Integration tests for FastAPI endpoints using TestClient."""
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
 
 @pytest.fixture(autouse=True)

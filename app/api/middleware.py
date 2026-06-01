@@ -12,8 +12,6 @@ import uuid
 from collections import defaultdict
 from datetime import datetime
 
-from starlette.requests import Request
-
 from app.common.config import settings
 from app.common.logger import clear_request_context, get_logger, set_request_context
 
@@ -201,18 +199,12 @@ class RateLimitMiddleware:
                 break
         if not client_ip:
             client = scope.get("client")
-            if client:
-                client_ip = client[0]
-            else:
-                client_ip = "unknown"
+            client_ip = client[0] if client else "unknown"
 
         now = time.time()
         self._clean_window(client_ip, now)
 
         if len(self._windows[client_ip]) >= self.max_requests:
-            retry_after = max(
-                int(self.window_seconds - (now - self._windows[client_ip][0])), 1
-            )
             logger.warning("rate_limit_exceeded", extra={"client_ip": client_ip})
             await _send_error(
                 send, 429, "RATE_LIMIT_EXCEEDED", "\u8bf7\u6c42\u592a\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5"

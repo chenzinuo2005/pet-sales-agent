@@ -5,8 +5,8 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset, Subset
 from torchvision import transforms
-from torchvision.transforms import RandAugment
 from torchvision.datasets import OxfordIIITPet
+from torchvision.transforms import RandAugment
 
 from app.common.logger import logger
 
@@ -44,9 +44,9 @@ def cutmix_collate_fn(batch, num_classes: int = 37, alpha: float = 1.0):
     Returns:
         (mixed_images, mixed_labels) — labels become soft one-hot vectors.
     """
-    images, targets = zip(*batch)
-    images = torch.stack(images)
-    targets = torch.tensor(targets)
+    images_tuple, targets_tuple = zip(*batch, strict=True)  # type: ignore[assignment]
+    images = torch.stack(images_tuple)
+    targets = torch.tensor(targets_tuple)
 
     # Random permutation for pairing
     batch_size = images.size(0)
@@ -59,20 +59,20 @@ def cutmix_collate_fn(batch, num_classes: int = 37, alpha: float = 1.0):
     lam = max(lam, 1.0 - lam)  # bounding box: use larger portion
 
     # CutMix bounding box
-    _, _, H, W = images.shape
-    cx, cy = torch.randint(W, (1,)).item(), torch.randint(H, (1,)).item()
-    cut_w = int(W * (1.0 - lam) ** 0.5)
-    cut_h = int(H * (1.0 - lam) ** 0.5)
+    _, _, h, w = images.shape
+    cx, cy = torch.randint(w, (1,)).item(), torch.randint(h, (1,)).item()
+    cut_w = int(w * (1.0 - lam) ** 0.5)
+    cut_h = int(h * (1.0 - lam) ** 0.5)
     x1 = max(cx - cut_w // 2, 0)
     y1 = max(cy - cut_h // 2, 0)
-    x2 = min(cx + cut_w // 2, W)
-    y2 = min(cy + cut_h // 2, H)
+    x2 = min(cx + cut_w // 2, w)
+    y2 = min(cy + cut_h // 2, h)
 
     # Replace the region with shuffled image
-    images[:, :, y1:y2, x1:x2] = shuffled_images[:, :, y1:y2, x1:x2]
+    images[:, :, y1:y2, x1:x2] = shuffled_images[:, :, y1:y2, x1:x2]  # type: ignore[misc]
 
     # Adjust lambda based on actual area
-    lam = 1.0 - ((x2 - x1) * (y2 - y1)) / (H * W)
+    lam = 1.0 - ((x2 - x1) * (y2 - y1)) / (h * w)
 
     # Soft labels
     targets_one_hot = torch.zeros(batch_size, num_classes)

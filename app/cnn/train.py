@@ -38,11 +38,11 @@ def train_epoch(
         # EMA update after each optimizer step
         if ema_model is not None:
             with torch.no_grad():
-                for ema_p, p in zip(ema_model.parameters(), model.parameters()):
+                for ema_p, p in zip(ema_model.parameters(), model.parameters(), strict=True):
                     ema_p.data.mul_(ema_decay).add_(p.data, alpha=1.0 - ema_decay)
 
         running_loss += loss.item() * images.size(0)
-    return running_loss / len(loader.dataset)
+    return running_loss / len(loader.dataset)  # type: ignore[no-any-return,arg-type]
 
 
 @torch.no_grad()
@@ -128,8 +128,8 @@ def train(
     # ---- Differential learning rates ----
     # Slower LR for pretrained backbone, faster for new classifier head
     optimizer = optim.AdamW([
-        {"params": model.features.parameters(), "lr": lr * 0.1},
-        {"params": model.classifier.parameters(), "lr": lr},
+        {"params": model.features.parameters(), "lr": lr * 0.1},      # type: ignore[union-attr]
+        {"params": model.classifier.parameters(), "lr": lr},          # type: ignore[union-attr]
     ], weight_decay=weight_decay)
 
     # ---- LR warmup (linear ramp from ~0) ----

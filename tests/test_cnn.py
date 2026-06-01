@@ -1,15 +1,13 @@
 """Tests for CNN model, dataset, and inference pipeline."""
 import os
-import sys
 import tempfile
 
 import pytest
 import torch
-from PIL import Image
 
-from app.cnn.model import create_model, count_parameters
 from app.cnn.dataset import create_dataloaders
-from app.cnn.inference import predict_breed, CLASS_NAMES, BREED_MAPPING
+from app.cnn.inference import BREED_MAPPING, CLASS_NAMES, predict_breed
+from app.cnn.model import count_parameters, create_model
 
 DATASET_ROOT = os.environ.get("OXFORD_PET_ROOT", "D:/datasets/oxford-iiit-pet")
 

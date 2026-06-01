@@ -1,7 +1,8 @@
 """知识库数据生成 — 调用 DeepSeek API 批量生成 5 个知识库 txt"""
 import os
-from openai import OpenAI
+
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -122,7 +123,7 @@ def main():
 
     # after_sales.txt 单独生成（非按品种）
     print(f"\n{'='*50}")
-    print(f"开始生成: after_sales.txt")
+    print("开始生成: after_sales.txt")
     print(f"{'='*50}")
     generate_after_sales()
 
@@ -147,7 +148,7 @@ def generate_after_sales():
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print(f"  [OK] after_sales.txt done")
+    print("  [OK] after_sales.txt done")
 
 
 if __name__ == "__main__":

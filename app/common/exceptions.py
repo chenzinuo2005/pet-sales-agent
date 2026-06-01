@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 
-class AppException(Exception):
+class AppException(Exception):  # noqa: N818
     """Base exception for all application-level errors.
 
     Attributes:

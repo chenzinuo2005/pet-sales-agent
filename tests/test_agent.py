@@ -1,7 +1,7 @@
 """Tests for Agent core, tools, and system prompt."""
+import os
 import sqlite3
 import sys
-import os
 
 import pytest
 
@@ -25,8 +25,10 @@ class TestSystemPrompt:
 class TestTools:
     def test_search_pet_knowledge_factory(self):
         from unittest.mock import MagicMock
-        from app.agents.custom_tools import create_search_pet_knowledge
+
         from langchain_core.tools import BaseTool
+
+        from app.agents.custom_tools import create_search_pet_knowledge
 
         container = MagicMock()
         tool = create_search_pet_knowledge(container)
@@ -34,8 +36,10 @@ class TestTools:
 
     def test_tavily_web_search_factory(self):
         from unittest.mock import MagicMock
-        from app.agents.custom_tools import create_tavily_web_search
+
         from langchain_core.tools import BaseTool
+
+        from app.agents.custom_tools import create_tavily_web_search
 
         container = MagicMock()
         tool = create_tavily_web_search(container)
@@ -83,9 +87,10 @@ class TestCheckpointer:
     @pytest.fixture
     def temp_db(self):
         import tempfile
+
         from langgraph.checkpoint.sqlite import SqliteSaver
 
-        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)  # noqa: SIM115
         tmp.close()
         conn = sqlite3.connect(tmp.name, check_same_thread=False)
         cp = SqliteSaver(conn)

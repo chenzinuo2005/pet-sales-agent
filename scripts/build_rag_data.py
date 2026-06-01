@@ -4,8 +4,8 @@ Usage: uv run python scripts/build_rag_data.py
 Output: data/breeds_encyclopedia.txt (all 37 breeds, one self-contained section each)
 """
 
-import re
 import os
+import re
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 

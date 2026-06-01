@@ -4,8 +4,8 @@ import re
 import chromadb
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.common.logger import logger
 
@@ -23,7 +23,7 @@ except Exception as e:
     logger.warning("embeddings_fallback", extra={"error": str(e), "fallback": "huggingface"})
     from langchain_community.embeddings import HuggingFaceEmbeddings
 
-    embeddings = HuggingFaceEmbeddings(model_name="shibing624/text2vec-base-chinese")
+    embeddings = HuggingFaceEmbeddings(model_name="shibing624/text2vec-base-chinese")  # type: ignore[assignment]
 
 # 文本分割器 — for non-encyclopedia files (after_sales, care_guide, etc.)
 text_splitter = RecursiveCharacterTextSplitter(

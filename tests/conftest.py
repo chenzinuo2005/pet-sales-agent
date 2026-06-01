@@ -33,6 +33,7 @@ def resources_dir(project_root):
 def mock_config():
     """Return a mock AppConfig with fake API keys (never real keys)."""
     from pydantic import SecretStr
+
     from app.common.config import AppConfig
 
     return AppConfig(
@@ -140,9 +141,8 @@ def sample_cnn_result():
 def temp_image_file():
     """Create a temporary JPEG file for testing image upload."""
     from PIL import Image
-    import tempfile
 
-    tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+    tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)  # noqa: SIM115
     img = Image.new("RGB", (224, 224), color="white")
     img.save(tmp.name, "JPEG")
     tmp.close()

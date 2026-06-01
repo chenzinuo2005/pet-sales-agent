@@ -1,8 +1,8 @@
 """Tests for application configuration."""
 import os
-import pytest
 from unittest.mock import patch
-from pydantic import SecretStr, ValidationError
+
+from pydantic import SecretStr
 
 
 class TestAppConfig:
@@ -10,7 +10,7 @@ class TestAppConfig:
 
     def test_settings_loads_from_env(self):
         """Settings singleton should load without error (env vars present)."""
-        from app.common.config import settings, AppConfig
+        from app.common.config import AppConfig, settings
         assert isinstance(settings, AppConfig)
 
     def test_settings_api_keys_are_secret(self):
@@ -44,7 +44,6 @@ class TestAppConfig:
 
     def test_missing_required_keys_raises_error(self):
         """Creating AppConfig without required keys should fail."""
-        from app.common.config import AppConfig
         with patch.dict(os.environ, {}, clear=True):
             # Temporarily clear env and try to construct
             # This should raise ValidationError for missing api keys

@@ -41,7 +41,7 @@ def _evaluate(
         all_preds.extend(preds.cpu().tolist())
 
     total = len(all_targets)
-    correct = sum(1 for t, p in zip(all_targets, all_preds) if t == p)
+    correct = sum(1 for t, p in zip(all_targets, all_preds, strict=True) if t == p)
     return running_loss / total, correct / total, all_targets, all_preds
 
 
@@ -53,7 +53,7 @@ def _plot_confusion_matrix(
 ) -> None:
     """Build and save a confusion-matrix heatmap as PNG."""
     cm = np.zeros((num_classes, num_classes), dtype=np.int64)
-    for t, p in zip(targets, preds):
+    for t, p in zip(targets, preds, strict=True):
         cm[t][p] += 1
 
     fig, ax = plt.subplots(figsize=(20, 18))

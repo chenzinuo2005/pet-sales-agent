@@ -144,7 +144,7 @@ class LogContextAdapter(logging.LoggerAdapter):
         if ctx is not None:
             extra.setdefault("request_id", ctx.request_id)
             extra.setdefault("thread_id", ctx.thread_id)
-        for key, value in self.extra.items():
+        for key, value in (self.extra or {}).items():
             extra.setdefault(key, value)
         kwargs["extra"] = extra
         return msg, kwargs

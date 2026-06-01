@@ -12,8 +12,8 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-from app.common.config import settings
-from app.common.logger import logger, setup_logging
+from app.common.config import settings  # noqa: E402
+from app.common.logger import logger, setup_logging  # noqa: E402
 
 
 def cmd_chat(args: argparse.Namespace) -> None:

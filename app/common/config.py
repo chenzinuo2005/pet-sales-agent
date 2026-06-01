@@ -146,7 +146,7 @@ class AppConfig(BaseSettings):
 # Module-level singleton
 # -----------------------------------------------------------------------
 
-settings = AppConfig()
+settings = AppConfig()  # type: ignore[call-arg]
 """Pre-built singleton instance.  Import this wherever config is needed."""
 
 

@@ -29,7 +29,7 @@ def create_model(num_classes: int = 37) -> nn.Module:
     )
 
     logger.info("EfficientNet-B0 created (pretrained ImageNet, %d classes)", num_classes)
-    return model
+    return model  # type: ignore[no-any-return]
 
 
 def count_parameters(model: nn.Module) -> tuple[int, int]:

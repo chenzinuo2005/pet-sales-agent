@@ -72,7 +72,7 @@ def chat_with_agent(
             stream_mode="messages",
         ):
             if isinstance(chunk, AIMessageChunk) and chunk.content:
-                yield chunk.content
+                yield chunk.content  # type: ignore[misc]
     except Exception as e:
         logger.error("agent_error", extra={"error": str(e)})
         yield "小宠正在休息，请稍后再试"

@@ -6,7 +6,7 @@ import json
 import os
 import tempfile
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
@@ -46,7 +46,7 @@ def error_response(
     error_code: str,
     message: str,
     request_id: str = "",
-    details: dict = None,
+    details: dict | None = None,
 ) -> JSONResponse:
     """Build a unified JSON error response.
 
@@ -119,10 +119,8 @@ async def _stream_chat_with_cleanup(
             yield sse
     finally:
         if tmp_path:
-            try:
+            with suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +171,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
         error_code=exc.error_code,
         message=exc.message,
         request_id=request_id,
-        details=exc.details if exc.details else None,
+        details=exc.details if exc.details else None,  # type: ignore[arg-type]
     )
 
 
@@ -264,7 +262,7 @@ async def health_v1(request: Request):
     else:
         overall = "degraded"
 
-    return HealthResponse(status=overall, components=components).model_dump()
+    return HealthResponse(status=overall, components=components).model_dump()  # type: ignore[arg-type]
 
 
 @app.post("/api/v1/session")
@@ -304,11 +302,11 @@ async def chat_upload_v1(
     request: Request,
     message: str = Form(""),
     thread_id: str = Form(""),
-    image: UploadFile = File(...),
+    image: UploadFile = File(...),  # noqa: B008
 ):
     """Chat with image upload, streaming agent tokens via SSE."""
     suffix = os.path.splitext(image.filename or ".jpg")[1] or ".jpg"
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)  # noqa: SIM115
     contents = await image.read()
     tmp.write(contents)
     tmp.close()
@@ -342,7 +340,7 @@ async def get_history_v1(request: Request, thread_id: str):
     logger.info("history_get", extra={"thread_id": thread_id})
     messages = await asyncio.to_thread(get_messages_with_container, get_container(), thread_id)
     return [
-        HistoryMessage(role=m["role"], content=m["content"]).model_dump()
+        HistoryMessage(role=m["role"], content=m["content"]).model_dump()  # type: ignore[arg-type]
         for m in messages
     ]
 
@@ -383,7 +381,7 @@ async def chat_upload_legacy(
     request: Request,
     message: str = Form(""),
     thread_id: str = Form(""),
-    image: UploadFile = File(...),
+    image: UploadFile = File(...),  # noqa: B008
 ):
     """Deprecated — delegates to /api/v1/chat/upload."""
     return await chat_upload_v1(request, message, thread_id, image)

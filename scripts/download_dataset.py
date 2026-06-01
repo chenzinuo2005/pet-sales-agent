@@ -1,9 +1,8 @@
 """Robust Oxford-IIIT Pet dataset download with retry + resume."""
 import os
-import sys
+import tarfile
 import time
 import urllib.request
-import tarfile
 
 DATA_ROOT = "D:/datasets/oxford-iiit-pet"
 FILES = [
@@ -80,7 +79,7 @@ def main():
         with tarfile.open(dest) as tar:
             tar.extractall(path=DATA_ROOT, filter="data")
         os.remove(dest)
-        print(f"  Extracted and cleaned up.")
+        print("  Extracted and cleaned up.")
 
     print(f"\nAll done! Contents of {DATA_ROOT}:")
     for item in sorted(os.listdir(DATA_ROOT)):
